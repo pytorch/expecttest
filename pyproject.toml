@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "expecttest"
+version = "0.1.0"
+description = ""
+readme = "README.md"
+authors = ["Edward Z. Yang <ezyang@mit.edu>"]
+license = "MIT"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[tool.poetry.dependencies]
+python = "^3.6"
+
+[tool.poetry.dev-dependencies]
+flake8 = "^3"
+hypothesis = "^6"
+mypy = "^0.910"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
