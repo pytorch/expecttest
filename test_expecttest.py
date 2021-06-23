@@ -3,7 +3,7 @@ import string
 import textwrap
 import traceback
 import unittest
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 import hypothesis
 from hypothesis.strategies import (booleans, composite, integers, sampled_from,
@@ -13,7 +13,7 @@ import expecttest
 
 
 @composite
-def text_lineno(draw):
+def text_lineno(draw: Any) -> Tuple[str, int]:
     t = draw(text("a\n"))
     lineno = draw(integers(min_value=1, max_value=t.count("\n") + 1))
     return (t, lineno)
@@ -21,18 +21,18 @@ def text_lineno(draw):
 
 class TestExpectTest(expecttest.TestCase):
     @hypothesis.given(text_lineno())
-    def test_nth_line_ref(self, t_lineno):
+    def test_nth_line_ref(self, t_lineno: Tuple[str, int]) -> None:
         t, lineno = t_lineno
         hypothesis.event("lineno = {}".format(lineno))
 
-        def nth_line_ref(src, lineno):
+        def nth_line_ref(src: str, lineno: int) -> int:
             xs = src.split("\n")[:lineno]
             xs[-1] = ''
             return len("\n".join(xs))
         self.assertEqual(expecttest.nth_line(t, lineno), nth_line_ref(t, lineno))
 
     @hypothesis.given(text(string.printable), booleans(), sampled_from(['"', "'"]))
-    def test_replace_string_literal_roundtrip(self, t, raw, quote):
+    def test_replace_string_literal_roundtrip(self, t: str, raw: bool, quote: str) -> None:
         if raw:
             hypothesis.assume(expecttest.ok_for_raw_triple_quoted_string(t, quote=quote))
         prog = """\
@@ -49,7 +49,7 @@ class TestExpectTest(expecttest.TestCase):
         self.assertEqual(ns['r2'], expecttest.normalize_nl(t), msg=msg)  # noqa: F821
         self.assertEqual(ns['r3'], 'placeholder3', msg=msg)  # noqa: F821
 
-    def test_sample_lineno(self):
+    def test_sample_lineno(self) -> None:
         prog = r"""
 single_single('''0''')
 single_multi('''1''')
@@ -109,8 +109,8 @@ different_indent(
 )
 """)
 
-    def test_lineno_assumptions(self):
-        def get_tb(s):
+    def test_lineno_assumptions(self) -> None:
+        def get_tb(s: str) -> traceback.StackSummary:
             return traceback.extract_stack(limit=2)
 
         tb1 = get_tb("")
@@ -126,7 +126,7 @@ c""")
             self.assertEqual(tb1[0].lineno + 1 + 2, tb2[0].lineno)
 
 
-def load_tests(loader, tests, ignore):
+def load_tests(loader: unittest.TestLoader, tests: unittest.TestSuite, ignore: Any) -> unittest.TestSuite:
     tests.addTests(doctest.DocTestSuite(expecttest))
     return tests
 

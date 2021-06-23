@@ -5,14 +5,14 @@ import string
 import sys
 import traceback
 import unittest
-from typing import Tuple
+from typing import Any, Callable, Dict, List, Match, Tuple
 
 ACCEPT = os.getenv('EXPECTTEST_ACCEPT')
 
 LINENO_AT_START = sys.version_info >= (3, 8)
 
 
-def nth_line(src, lineno):
+def nth_line(src: str, lineno: int) -> int:
     """
     Compute the starting index of the n-th line (where n is 1-indexed)
 
@@ -26,7 +26,7 @@ def nth_line(src, lineno):
     return pos
 
 
-def nth_eol(src, lineno):
+def nth_eol(src: str, lineno: int) -> int:
     """
     Compute the ending index of the n-th line (before the newline,
     where n is 1-indexed)
@@ -43,22 +43,24 @@ def nth_eol(src, lineno):
     return pos
 
 
-def normalize_nl(t):
+def normalize_nl(t: str) -> str:
     return t.replace('\r\n', '\n').replace('\r', '\n')
 
 
-def escape_trailing_quote(s, quote):
+def escape_trailing_quote(s: str, quote: str) -> str:
     if s and s[-1] == quote:
         return s[:-1] + '\\' + quote
     else:
         return s
 
 
-class EditHistory(object):
-    def __init__(self):
+class EditHistory:
+    state: Dict[str, List[Tuple[int, int]]]
+
+    def __init__(self) -> None:
         self.state = {}
 
-    def adjust_lineno(self, fn, lineno):
+    def adjust_lineno(self, fn: str, lineno: int) -> int:
         if fn not in self.state:
             return lineno
         for edit_loc, edit_diff in self.state[fn]:
@@ -66,17 +68,17 @@ class EditHistory(object):
                 lineno += edit_diff
         return lineno
 
-    def seen_file(self, fn):
+    def seen_file(self, fn: str) -> bool:
         return fn in self.state
 
-    def record_edit(self, fn, lineno, delta):
+    def record_edit(self, fn: str, lineno: int, delta: int) -> None:
         self.state.setdefault(fn, []).append((lineno, delta))
 
 
 EDIT_HISTORY = EditHistory()
 
 
-def ok_for_raw_triple_quoted_string(s, quote):
+def ok_for_raw_triple_quoted_string(s: str, quote: str) -> bool:
     """
     Is this string representable inside a raw triple-quoted string?
     Due to the fact that backslashes are always treated literally,
@@ -144,7 +146,7 @@ def replace_string_literal(src : str, start_lineno : int, end_lineno : int,
     end = nth_eol(src, end_lineno)
     assert start <= end
 
-    def replace(m):
+    def replace(m: Match[str]) -> str:
         s = new_string
         raw = m.group('raw') == 'r'
         if not raw or not ok_for_raw_triple_quoted_string(s, quote=m.group('quote')[0]):
@@ -169,7 +171,7 @@ def replace_string_literal(src : str, start_lineno : int, end_lineno : int,
 class TestCase(unittest.TestCase):
     longMessage = True
 
-    def assertExpectedInline(self, actual, expect, skip=0):
+    def assertExpectedInline(self, actual: str, expect: str, skip: int = 0) -> None:
         """
         Assert that actual is equal to expect.  The expect argument
         MUST be a string literal (triple-quoted strings OK), and will
@@ -236,7 +238,7 @@ class TestCase(unittest.TestCase):
                          "staging/committing your changes before doing this)")
             self.assertMultiLineEqualMaybeCppStack(expect, actual, msg=help_text)
 
-    def assertExpectedRaisesInline(self, exc_type, callable, expect, *args, **kwargs):
+    def assertExpectedRaisesInline(self, exc_type: Any, callable: Callable[..., Any], expect: str, *args: Any, **kwargs: Any) -> None:
         """
         Like assertExpectedInline, but tests the str() representation of
         the raised exception from callable.  The raised exeption must
@@ -250,7 +252,7 @@ class TestCase(unittest.TestCase):
         # Don't put this in the try block; the AssertionError will catch it
         self.fail(msg="Did not raise when expected to")
 
-    def assertMultiLineEqualMaybeCppStack(self, expect, actual, *args, **kwargs):
+    def assertMultiLineEqualMaybeCppStack(self, expect: str, actual: str, *args: Any, **kwargs: Any) -> None:
         self.assertGreaterEqual(len(actual), len(expect), *args, **kwargs)
         if hasattr(self, "assertMultiLineEqual"):
             self.assertMultiLineEqual(expect, actual[:len(expect)], *args, **kwargs)
