@@ -5,6 +5,7 @@ description = ""
 readme = "README.md"
 repository = "https://github.com/ezyang/ghstack"
 authors = ["Edward Z. Yang <ezyang@mit.edu>"]
+include = ["expecttest/py.typed"]
 license = "MIT"
 classifiers = [
     "Programming Language :: Python :: 3",
