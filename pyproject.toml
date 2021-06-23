@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "expecttest"
-version = "0.1.1"
+version = "0.1.2"
 description = ""
 readme = "README.md"
 repository = "https://github.com/ezyang/ghstack"
