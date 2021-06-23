@@ -3,6 +3,7 @@ name = "expecttest"
 version = "0.1.0"
 description = ""
 readme = "README.md"
+repository = "https://github.com/ezyang/ghstack"
 authors = ["Edward Z. Yang <ezyang@mit.edu>"]
 license = "MIT"
 classifiers = [

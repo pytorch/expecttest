@@ -1,4 +1,4 @@
-# expecttest
+# expecttest [![PyPI version](https://badge.fury.io/py/expecttest.svg)](https://badge.fury.io/py/expecttest)
 
 This library implements expect tests (also known as "golden" tests). Expect
 tests are a method of writing tests where instead of hard-coding the expected
