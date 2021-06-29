@@ -241,7 +241,7 @@ class TestCase(unittest.TestCase):
 
                     assert old != new, f"Failed to substitute string at {fn}:{lineno}; did you use triple quotes?  " \
                         "If this is unexpected, please file a bug report at " \
-                        "https://github.com/pytorch/pytorch/issues/new?labels=module:%20expecttest " \
+                        "https://github.com/ezyang/expecttest/issues/new " \
                         f"with the contents of the source file near {fn}:{lineno}"
 
                     # Only write the backup file the first time we hit the
