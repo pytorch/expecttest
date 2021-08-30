@@ -133,7 +133,7 @@ def replace_string_literal(src : str, start_lineno : int, end_lineno : int,
         f('''a \'\'\' b''')
     """
     # Haven't implemented correct escaping for non-printable characters
-    assert all(c in string.printable for c in new_string)
+    assert all(c in string.printable for c in new_string), repr(new_string)
 
     new_string = normalize_nl(new_string)
 
