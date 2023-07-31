@@ -1,8 +1,13 @@
 import doctest
+import sys
 import string
+import shutil
+import subprocess
+import os
 import textwrap
 import traceback
 import unittest
+import tempfile
 from typing import Any, Dict, Tuple
 
 import hypothesis
@@ -10,6 +15,24 @@ from hypothesis.strategies import (booleans, composite, integers, sampled_from,
                                    text)
 
 import expecttest
+
+
+def sh(file: str, accept: bool = False) -> subprocess.CompletedProcess:  # type: ignore[type-arg]
+    env = ''
+    if accept:
+        env = 'EXPECTTEST_ACCEPT=1 '
+    print(f'    $ {env}python {file}')
+    r = subprocess.run(
+        [sys.executable, file],
+        capture_output=True,
+        # NB: Always OVERRIDE EXPECTTEST_ACCEPT variable, so outer usage doesn't
+        # get confused!
+        env={**os.environ, 'EXPECTTEST_ACCEPT': '1' if accept else ''},
+        text=True,
+    )
+    if r.stderr:
+        print(textwrap.indent(r.stderr, '    '))
+    return r
 
 
 @composite
@@ -118,12 +141,28 @@ different_indent(
 b
 c""")
 
+        assert isinstance(tb1[0].lineno, int)
         if expecttest.LINENO_AT_START:
             # tb2's stack starts on the next line
             self.assertEqual(tb1[0].lineno + 1, tb2[0].lineno)
         else:
             # starts at the end here
             self.assertEqual(tb1[0].lineno + 1 + 2, tb2[0].lineno)
+
+    def test_smoketest_accept_twice(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            dst = os.path.join(d, 'test.py')
+            shutil.copy(os.path.join(os.path.dirname(__file__), 'smoketests/accept_twice.py'), dst)
+            r = sh(dst)
+            self.assertNotEqual(r.returncode, 0)
+            r = sh(dst, accept=True)
+            self.assertExpectedInline(r.stdout.replace(dst, 'test.py'), '''\
+Accepting new output for __main__.Test.test_a at test.py:10
+Skipping already accepted output for __main__.Test.test_a at test.py:10
+Accepting new output for __main__.Test.test_b at test.py:18
+''')
+            r = sh(dst)
+            self.assertEqual(r.returncode, 0)
 
 
 def load_tests(loader: unittest.TestLoader, tests: unittest.TestSuite, ignore: Any) -> unittest.TestSuite:
