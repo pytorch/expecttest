@@ -1,5 +1,5 @@
 #!/bin/sh
 set -ex
 flake8
-mypy .
+mypy --exclude=smoketests .
 python test_expecttest.py

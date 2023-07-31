@@ -5,7 +5,7 @@ import string
 import sys
 import traceback
 import unittest
-from typing import Any, Callable, Dict, List, Match, Tuple
+from typing import Any, Callable, Dict, List, Match, Tuple, Set
 
 ACCEPT = os.getenv('EXPECTTEST_ACCEPT')
 
@@ -56,9 +56,11 @@ def escape_trailing_quote(s: str, quote: str) -> str:
 
 class EditHistory:
     state: Dict[str, List[Tuple[int, int]]]
+    seen: Set[Tuple[str, int]]
 
     def __init__(self) -> None:
         self.state = {}
+        self.seen = set()
 
     def adjust_lineno(self, fn: str, lineno: int) -> int:
         if fn not in self.state:
@@ -71,8 +73,12 @@ class EditHistory:
     def seen_file(self, fn: str) -> bool:
         return fn in self.state
 
+    def seen_edit(self, fn: str, lineno: int) -> bool:
+        return (fn, lineno) in self.seen
+
     def record_edit(self, fn: str, lineno: int, delta: int) -> None:
         self.state.setdefault(fn, []).append((lineno, delta))
+        self.seen.add((fn, lineno))
 
 
 EDIT_HISTORY = EditHistory()
@@ -211,6 +217,9 @@ class TestCase(unittest.TestCase):
                 # current frame and parent frame, plus any requested skip
                 tb = traceback.extract_stack(limit=2 + skip)
                 fn, lineno, _, _ = tb[0]
+                if EDIT_HISTORY.seen_edit(fn, lineno):
+                    print("Skipping already accepted output for {} at {}:{}".format(self.id(), fn, lineno))
+                    return
                 print("Accepting new output for {} at {}:{}".format(self.id(), fn, lineno))
                 with open(fn, 'r+') as f:
                     old = f.read()
@@ -276,7 +285,6 @@ class TestCase(unittest.TestCase):
         self.fail(msg="Did not raise when expected to")
 
     def assertMultiLineEqualMaybeCppStack(self, expect: str, actual: str, *args: Any, **kwargs: Any) -> None:
-        self.assertGreaterEqual(len(actual), len(expect), *args, **kwargs)
         if hasattr(self, "assertMultiLineEqual"):
             self.assertMultiLineEqual(expect, actual[:len(expect)], *args, **kwargs)
         else:
