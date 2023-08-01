@@ -285,14 +285,13 @@ class TestCase(unittest.TestCase):
         self.fail(msg="Did not raise when expected to")
 
     def assertMultiLineEqualMaybeCppStack(self, expect: str, actual: str, *args: Any, **kwargs: Any) -> None:
+        cpp_stack_header = "\nException raised from"
+        if cpp_stack_header in actual:
+            actual = actual.rsplit(cpp_stack_header, maxsplit=1)[0]
         if hasattr(self, "assertMultiLineEqual"):
-            self.assertMultiLineEqual(expect, actual[:len(expect)], *args, **kwargs)
+            self.assertMultiLineEqual(expect, actual, *args, **kwargs)
         else:
-            self.assertEqual(expect, actual[:len(expect)], *args, **kwargs)
-        if len(actual) > len(expect):
-            cpp_stacktrace_header = "\nException raised from"
-            end_header = len(expect) + len(cpp_stacktrace_header)
-            self.assertEqual(actual[len(expect): end_header], cpp_stacktrace_header)
+            self.assertEqual(expect, actual, *args, **kwargs)
 
 
 if __name__ == "__main__":
