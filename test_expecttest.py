@@ -164,6 +164,19 @@ Accepting new output for __main__.Test.test_b at test.py:18
             r = sh(dst)
             self.assertEqual(r.returncode, 0)
 
+    def test_smoketest_no_unittest(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            dst = os.path.join(d, 'test.py')
+            shutil.copy(os.path.join(os.path.dirname(__file__), 'smoketests/no_unittest.py'), dst)
+            r = sh(dst)
+            self.assertNotEqual(r.returncode, 0)
+            r = sh(dst, accept=True)
+            self.assertExpectedInline(r.stdout.replace(dst, 'test.py'), '''\
+Accepting new output at test.py:5
+''')
+            r = sh(dst)
+            self.assertEqual(r.returncode, 0)
+
 
 def load_tests(loader: unittest.TestLoader, tests: unittest.TestSuite, ignore: Any) -> unittest.TestSuite:
     tests.addTests(doctest.DocTestSuite(expecttest))

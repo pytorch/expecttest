@@ -5,7 +5,8 @@ import string
 import sys
 import traceback
 import unittest
-from typing import Any, Callable, Dict, List, Match, Tuple, Set
+import difflib
+from typing import Any, Callable, Dict, List, Match, Tuple, Set, Optional
 
 ACCEPT = os.getenv('EXPECTTEST_ACCEPT')
 
@@ -180,6 +181,90 @@ def replace_many(rep: Dict[str, str], text: str) -> str:
     return pattern.sub(lambda m: rep[re.escape(m.group(0))], text)
 
 
+def assert_eq(expect: str, actual: str, *, msg: str) -> None:
+    # TODO: improve this
+    if actual != expect:
+        diff = ''.join(difflib.unified_diff(expect.splitlines(True), actual.splitlines(True), fromfile='expect.txt', tofile='actual.txt'))
+        raise AssertionError(
+            f"Mismatch between actual and expect strings:\n\n{diff}\n\n{msg}"
+        )
+
+
+def assert_expected_inline(actual: str, expect: str, skip: int = 0, *, expect_filters: Optional[Dict[str, str]] = None, assert_eq: Any = assert_eq, debug_id: str = "") -> None:
+    """
+    Assert that actual is equal to expect.  The expect argument
+    MUST be a string literal (triple-quoted strings OK), and will
+    get updated directly in source when you run the test suite
+    with EXPECTTEST_ACCEPT=1.
+
+    If you want to write a helper function that makes use of
+    assertExpectedInline (e.g., expect is not a string literal),
+    set the skip argument to how many function calls we should
+    skip to find the string literal to update.
+    """
+    if expect_filters is not None:
+        actual = replace_many(expect_filters, actual)
+
+    if ACCEPT:
+        if actual != expect:
+            # current frame and parent frame, plus any requested skip
+            tb = traceback.extract_stack(limit=2 + skip)
+            fn, lineno, _, _ = tb[0]
+            debug_suffix = "" if not debug_id else f" for {debug_id}"
+            if EDIT_HISTORY.seen_edit(fn, lineno):
+                print("Skipping already accepted output{} at {}:{}".format(debug_suffix, fn, lineno))
+                return
+            print("Accepting new output{} at {}:{}".format(debug_suffix, fn, lineno))
+            with open(fn, 'r+') as f:
+                old = f.read()
+                old_ast = ast.parse(old)
+
+                # NB: it's only the traceback line numbers that are wrong;
+                # we reread the file every time we write to it, so AST's
+                # line numbers are correct
+                lineno = EDIT_HISTORY.adjust_lineno(fn, lineno)
+
+                # Conservative assumption to start
+                start_lineno = lineno
+                end_lineno = lineno
+                # Try to give a more accurate bounds based on AST
+                # NB: this walk is in no specified order (in practice it's
+                # breadth first)
+                for n in ast.walk(old_ast):
+                    if isinstance(n, ast.Expr):
+                        if hasattr(n, 'end_lineno'):
+                            assert LINENO_AT_START
+                            if n.lineno == start_lineno:
+                                end_lineno = n.end_lineno  # type: ignore[attr-defined]
+                        else:
+                            if n.lineno == end_lineno:
+                                start_lineno = n.lineno
+
+                new, delta = replace_string_literal(old, start_lineno, end_lineno, actual)
+
+                assert old != new, f"Failed to substitute string at {fn}:{lineno}; did you use triple quotes?  " \
+                    "If this is unexpected, please file a bug report at " \
+                    "https://github.com/ezyang/expecttest/issues/new " \
+                    f"with the contents of the source file near {fn}:{lineno}"
+
+                # Only write the backup file the first time we hit the
+                # file
+                if not EDIT_HISTORY.seen_file(fn):
+                    with open(fn + ".bak", 'w') as f_bak:
+                        f_bak.write(old)
+                f.seek(0)
+                f.truncate(0)
+
+                f.write(new)
+
+            EDIT_HISTORY.record_edit(fn, lineno, delta)
+    else:
+        help_text = ("To accept the new output, re-run test with "
+                     "envvar EXPECTTEST_ACCEPT=1 (we recommend "
+                     "staging/committing your changes before doing this)")
+        assert_eq(expect, actual, msg=help_text)
+
+
 class TestCase(unittest.TestCase):
     longMessage = True
     _expect_filters: Dict[str, str]
@@ -209,66 +294,12 @@ class TestCase(unittest.TestCase):
         set the skip argument to how many function calls we should
         skip to find the string literal to update.
         """
-        if hasattr(self, '_expect_filters'):
-            actual = replace_many(self._expect_filters, actual)
-
-        if ACCEPT:
-            if actual != expect:
-                # current frame and parent frame, plus any requested skip
-                tb = traceback.extract_stack(limit=2 + skip)
-                fn, lineno, _, _ = tb[0]
-                if EDIT_HISTORY.seen_edit(fn, lineno):
-                    print("Skipping already accepted output for {} at {}:{}".format(self.id(), fn, lineno))
-                    return
-                print("Accepting new output for {} at {}:{}".format(self.id(), fn, lineno))
-                with open(fn, 'r+') as f:
-                    old = f.read()
-                    old_ast = ast.parse(old)
-
-                    # NB: it's only the traceback line numbers that are wrong;
-                    # we reread the file every time we write to it, so AST's
-                    # line numbers are correct
-                    lineno = EDIT_HISTORY.adjust_lineno(fn, lineno)
-
-                    # Conservative assumption to start
-                    start_lineno = lineno
-                    end_lineno = lineno
-                    # Try to give a more accurate bounds based on AST
-                    # NB: this walk is in no specified order (in practice it's
-                    # breadth first)
-                    for n in ast.walk(old_ast):
-                        if isinstance(n, ast.Expr):
-                            if hasattr(n, 'end_lineno'):
-                                assert LINENO_AT_START
-                                if n.lineno == start_lineno:
-                                    end_lineno = n.end_lineno  # type: ignore[attr-defined]
-                            else:
-                                if n.lineno == end_lineno:
-                                    start_lineno = n.lineno
-
-                    new, delta = replace_string_literal(old, start_lineno, end_lineno, actual)
-
-                    assert old != new, f"Failed to substitute string at {fn}:{lineno}; did you use triple quotes?  " \
-                        "If this is unexpected, please file a bug report at " \
-                        "https://github.com/ezyang/expecttest/issues/new " \
-                        f"with the contents of the source file near {fn}:{lineno}"
-
-                    # Only write the backup file the first time we hit the
-                    # file
-                    if not EDIT_HISTORY.seen_file(fn):
-                        with open(fn + ".bak", 'w') as f_bak:
-                            f_bak.write(old)
-                    f.seek(0)
-                    f.truncate(0)
-
-                    f.write(new)
-
-                EDIT_HISTORY.record_edit(fn, lineno, delta)
-        else:
-            help_text = ("To accept the new output, re-run test with "
-                         "envvar EXPECTTEST_ACCEPT=1 (we recommend "
-                         "staging/committing your changes before doing this)")
-            self.assertMultiLineEqualMaybeCppStack(expect, actual, msg=help_text)
+        assert_expected_inline(
+            actual, expect, skip=skip + 1,
+            expect_filters=getattr(self, '_expect_filters', None),
+            debug_id=self.id(),
+            assert_eq=self.assertMultiLineEqualMaybeCppStack,
+        )
 
     def assertExpectedRaisesInline(self, exc_type: Any, callable: Callable[..., Any], expect: str, *args: Any, **kwargs: Any) -> None:
         """
