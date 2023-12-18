@@ -8,7 +8,7 @@ import unittest
 import difflib
 from typing import Any, Callable, Dict, List, Match, Tuple, Set, Optional
 
-ACCEPT = os.getenv('EXPECTTEST_ACCEPT')
+ACCEPT = os.getenv("EXPECTTEST_ACCEPT")
 
 LINENO_AT_START = sys.version_info >= (3, 8)
 
@@ -23,7 +23,7 @@ def nth_line(src: str, lineno: int) -> int:
     assert lineno >= 1
     pos = 0
     for _ in range(lineno - 1):
-        pos = src.find('\n', pos) + 1
+        pos = src.find("\n", pos) + 1
     return pos
 
 
@@ -38,19 +38,19 @@ def nth_eol(src: str, lineno: int) -> int:
     assert lineno >= 1
     pos = -1
     for _ in range(lineno):
-        pos = src.find('\n', pos + 1)
+        pos = src.find("\n", pos + 1)
         if pos == -1:
             return len(src)
     return pos
 
 
 def normalize_nl(t: str) -> str:
-    return t.replace('\r\n', '\n').replace('\r', '\n')
+    return t.replace("\r\n", "\n").replace("\r", "\n")
 
 
 def escape_trailing_quote(s: str, quote: str) -> str:
     if s and s[-1] == quote:
-        return s[:-1] + '\\' + quote
+        return s[:-1] + "\\" + quote
     else:
         return s
 
@@ -98,22 +98,17 @@ def ok_for_raw_triple_quoted_string(s: str, quote: str) -> bool:
     >>> ok_for_raw_triple_quoted_string("a ''' b", quote="'")
     False
     """
-    return quote * 3 not in s and (not s or s[-1] not in [quote, '\\'])
+    return quote * 3 not in s and (not s or s[-1] not in [quote, "\\"])
 
 
 RE_EXPECT = re.compile(
-    (
-        r"(?P<raw>r?)"
-        r"(?P<quote>'''|" r'""")'
-        r"(?P<body>.*?)"
-        r"(?P=quote)"
-    ),
-    re.DOTALL
+    (r"(?P<raw>r?)" r"(?P<quote>'''|" r'""")' r"(?P<body>.*?)" r"(?P=quote)"), re.DOTALL
 )
 
 
-def replace_string_literal(src : str, start_lineno : int, end_lineno : int,
-                           new_string : str) -> Tuple[str, int]:
+def replace_string_literal(
+    src: str, start_lineno: int, end_lineno: int, new_string: str
+) -> Tuple[str, int]:
     r"""
     Replace a triple quoted string literal with new contents.
     Only handles printable ASCII correctly at the moment.  This
@@ -155,24 +150,30 @@ def replace_string_literal(src : str, start_lineno : int, end_lineno : int,
 
     def replace(m: Match[str]) -> str:
         s = new_string
-        raw = m.group('raw') == 'r'
-        if not raw or not ok_for_raw_triple_quoted_string(s, quote=m.group('quote')[0]):
+        raw = m.group("raw") == "r"
+        if not raw or not ok_for_raw_triple_quoted_string(s, quote=m.group("quote")[0]):
             raw = False
-            s = s.replace('\\', '\\\\')
-            if m.group('quote') == "'''":
+            s = s.replace("\\", "\\\\")
+            if m.group("quote") == "'''":
                 s = escape_trailing_quote(s, "'").replace("'''", r"\'\'\'")
             else:
-                s = escape_trailing_quote(s, '"').replace('"""', r'\"\"\"')
+                s = escape_trailing_quote(s, '"').replace('"""', r"\"\"\"")
 
         new_body = "\\\n" + s if "\n" in s and not raw else s
-        delta[0] -= m.group('body').count("\n")
-        return ''.join(['r' if raw else '',
-                        m.group('quote'),
-                        new_body,
-                        m.group('quote'),
-                        ])
+        delta[0] -= m.group("body").count("\n")
+        return "".join(
+            [
+                "r" if raw else "",
+                m.group("quote"),
+                new_body,
+                m.group("quote"),
+            ]
+        )
 
-    return (src[:start] + RE_EXPECT.sub(replace, src[start:end], count=1) + src[end:], delta[0])
+    return (
+        src[:start] + RE_EXPECT.sub(replace, src[start:end], count=1) + src[end:],
+        delta[0],
+    )
 
 
 def replace_many(rep: Dict[str, str], text: str) -> str:
@@ -184,13 +185,28 @@ def replace_many(rep: Dict[str, str], text: str) -> str:
 def assert_eq(expect: str, actual: str, *, msg: str) -> None:
     # TODO: improve this
     if actual != expect:
-        diff = ''.join(difflib.unified_diff(expect.splitlines(True), actual.splitlines(True), fromfile='expect.txt', tofile='actual.txt'))
+        diff = "".join(
+            difflib.unified_diff(
+                expect.splitlines(True),
+                actual.splitlines(True),
+                fromfile="expect.txt",
+                tofile="actual.txt",
+            )
+        )
         raise AssertionError(
             f"Mismatch between actual and expect strings:\n\n{diff}\n\n{msg}"
         )
 
 
-def assert_expected_inline(actual: str, expect: str, skip: int = 0, *, expect_filters: Optional[Dict[str, str]] = None, assert_eq: Any = assert_eq, debug_id: str = "") -> None:
+def assert_expected_inline(
+    actual: str,
+    expect: str,
+    skip: int = 0,
+    *,
+    expect_filters: Optional[Dict[str, str]] = None,
+    assert_eq: Any = assert_eq,
+    debug_id: str = "",
+) -> None:
     """
     Assert that actual is equal to expect.  The expect argument
     MUST be a string literal (triple-quoted strings OK), and will
@@ -212,10 +228,14 @@ def assert_expected_inline(actual: str, expect: str, skip: int = 0, *, expect_fi
             fn, lineno, _, _ = tb[0]
             debug_suffix = "" if not debug_id else f" for {debug_id}"
             if EDIT_HISTORY.seen_edit(fn, lineno):
-                print("Skipping already accepted output{} at {}:{}".format(debug_suffix, fn, lineno))
+                print(
+                    "Skipping already accepted output{} at {}:{}".format(
+                        debug_suffix, fn, lineno
+                    )
+                )
                 return
             print("Accepting new output{} at {}:{}".format(debug_suffix, fn, lineno))
-            with open(fn, 'r+') as f:
+            with open(fn, "r+") as f:
                 old = f.read()
                 old_ast = ast.parse(old)
 
@@ -232,7 +252,7 @@ def assert_expected_inline(actual: str, expect: str, skip: int = 0, *, expect_fi
                 # breadth first)
                 for n in ast.walk(old_ast):
                     if isinstance(n, ast.Expr):
-                        if hasattr(n, 'end_lineno'):
+                        if hasattr(n, "end_lineno"):
                             assert LINENO_AT_START
                             if n.lineno == start_lineno:
                                 end_lineno = n.end_lineno  # type: ignore[attr-defined]
@@ -240,17 +260,21 @@ def assert_expected_inline(actual: str, expect: str, skip: int = 0, *, expect_fi
                             if n.lineno == end_lineno:
                                 start_lineno = n.lineno
 
-                new, delta = replace_string_literal(old, start_lineno, end_lineno, actual)
+                new, delta = replace_string_literal(
+                    old, start_lineno, end_lineno, actual
+                )
 
-                assert old != new, f"Failed to substitute string at {fn}:{lineno}; did you use triple quotes?  " \
-                    "If this is unexpected, please file a bug report at " \
-                    "https://github.com/ezyang/expecttest/issues/new " \
+                assert old != new, (
+                    f"Failed to substitute string at {fn}:{lineno}; did you use triple quotes?  "
+                    "If this is unexpected, please file a bug report at "
+                    "https://github.com/ezyang/expecttest/issues/new "
                     f"with the contents of the source file near {fn}:{lineno}"
+                )
 
                 # Only write the backup file the first time we hit the
                 # file
                 if not EDIT_HISTORY.seen_file(fn):
-                    with open(fn + ".bak", 'w') as f_bak:
+                    with open(fn + ".bak", "w") as f_bak:
                         f_bak.write(old)
                 f.seek(0)
                 f.truncate(0)
@@ -259,9 +283,11 @@ def assert_expected_inline(actual: str, expect: str, skip: int = 0, *, expect_fi
 
             EDIT_HISTORY.record_edit(fn, lineno, delta)
     else:
-        help_text = ("To accept the new output, re-run test with "
-                     "envvar EXPECTTEST_ACCEPT=1 (we recommend "
-                     "staging/committing your changes before doing this)")
+        help_text = (
+            "To accept the new output, re-run test with "
+            "envvar EXPECTTEST_ACCEPT=1 (we recommend "
+            "staging/committing your changes before doing this)"
+        )
         assert_eq(expect, actual, msg=help_text)
 
 
@@ -270,16 +296,19 @@ class TestCase(unittest.TestCase):
     _expect_filters: Dict[str, str]
 
     def substituteExpected(self, pattern: str, replacement: str) -> None:
-        if not hasattr(self, '_expect_filters'):
+        if not hasattr(self, "_expect_filters"):
             self._expect_filters = {}
 
             def expect_filters_cleanup() -> None:
                 del self._expect_filters
+
             self.addCleanup(expect_filters_cleanup)
         if pattern in self._expect_filters:
             raise RuntimeError(
-                "Cannot remap {} to {} (existing mapping is {})"
-                .format(pattern, replacement, self._expect_filters[pattern]))
+                "Cannot remap {} to {} (existing mapping is {})".format(
+                    pattern, replacement, self._expect_filters[pattern]
+                )
+            )
         self._expect_filters[pattern] = replacement
 
     def assertExpectedInline(self, actual: str, expect: str, skip: int = 0) -> None:
@@ -295,13 +324,22 @@ class TestCase(unittest.TestCase):
         skip to find the string literal to update.
         """
         assert_expected_inline(
-            actual, expect, skip=skip + 1,
-            expect_filters=getattr(self, '_expect_filters', None),
+            actual,
+            expect,
+            skip=skip + 1,
+            expect_filters=getattr(self, "_expect_filters", None),
             debug_id=self.id(),
             assert_eq=self.assertMultiLineEqualMaybeCppStack,
         )
 
-    def assertExpectedRaisesInline(self, exc_type: Any, callable: Callable[..., Any], expect: str, *args: Any, **kwargs: Any) -> None:
+    def assertExpectedRaisesInline(
+        self,
+        exc_type: Any,
+        callable: Callable[..., Any],
+        expect: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         """
         Like assertExpectedInline, but tests the str() representation of
         the raised exception from callable.  The raised exeption must
@@ -315,7 +353,9 @@ class TestCase(unittest.TestCase):
         # Don't put this in the try block; the AssertionError will catch it
         self.fail(msg="Did not raise when expected to")
 
-    def assertMultiLineEqualMaybeCppStack(self, expect: str, actual: str, *args: Any, **kwargs: Any) -> None:
+    def assertMultiLineEqualMaybeCppStack(
+        self, expect: str, actual: str, *args: Any, **kwargs: Any
+    ) -> None:
         cpp_stack_header = "\nException raised from"
         if cpp_stack_header in actual:
             actual = actual.rsplit(cpp_stack_header, maxsplit=1)[0]
@@ -327,4 +367,5 @@ class TestCase(unittest.TestCase):
 
 if __name__ == "__main__":
     import doctest
+
     doctest.testmod()

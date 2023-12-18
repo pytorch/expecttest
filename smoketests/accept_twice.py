@@ -7,19 +7,25 @@ S2 = "c\nd"
 
 class Test(expecttest.TestCase):
     def bar(self):
-        self.assertExpectedInline(S1, """\
-w""")
+        self.assertExpectedInline(
+            S1,
+            """\
+w""",
+        )
 
     def test_a(self):
         self.bar()
         self.bar()
 
     def test_b(self):
-        self.assertExpectedInline(S2, """\
+        self.assertExpectedInline(
+            S2,
+            """\
 x
 y
-z""")
+z""",
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
