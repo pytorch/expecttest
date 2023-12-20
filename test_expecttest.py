@@ -8,6 +8,7 @@ import textwrap
 import traceback
 import unittest
 import tempfile
+import runpy
 from typing import Any, Dict, Tuple
 
 import hypothesis
@@ -117,7 +118,7 @@ different_indent(
                 prog, start_lineno, end_lineno, actual
             )
             # NB: it doesn't really matter start/end you record edit at
-            history.record_edit(fn, start_lineno, delta)
+            history.record_edit(fn, start_lineno, delta, actual)
         self.assertExpectedInline(
             prog,
             r"""
@@ -201,6 +202,60 @@ Accepting new output at test.py:5
             )
             r = sh(dst)
             self.assertEqual(r.returncode, 0)
+
+    def test_smoketest_accept_twice_reload(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            dst = os.path.join(d, "test.py")
+            shutil.copy(
+                os.path.join(
+                    os.path.dirname(__file__), "smoketests/accept_twice_reload.py"
+                ),
+                dst,
+            )
+            env = os.environ.copy()
+            try:
+                os.environ["EXPECTTEST_ACCEPT"] = "1"
+                runpy.run_path(dst)
+                expecttest.EDIT_HISTORY.reload_file(dst)
+                try:
+                    expecttest._TEST1 = True  # type: ignore[attr-defined]
+                    runpy.run_path(dst)
+                finally:
+                    delattr(expecttest, "_TEST1")
+            finally:
+                os.environ.clear()
+                os.environ.update(env)
+
+            # Should pass
+            runpy.run_path(dst)
+            try:
+                expecttest._TEST1 = True  # type: ignore[attr-defined]
+                runpy.run_path(dst)
+            finally:
+                delattr(expecttest, "_TEST1")
+
+    def test_smoketest_accept_twice_clobber(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            dst = os.path.join(d, "test.py")
+            shutil.copy(
+                os.path.join(
+                    os.path.dirname(__file__), "smoketests/accept_twice_clobber.py"
+                ),
+                dst,
+            )
+            env = os.environ.copy()
+            try:
+                os.environ["EXPECTTEST_ACCEPT"] = "1"
+                runpy.run_path(dst)
+                expecttest.EDIT_HISTORY.reload_file(dst)
+                try:
+                    expecttest._TEST2 = True  # type: ignore[attr-defined]
+                    self.assertRaises(AssertionError, lambda: runpy.run_path(dst))
+                finally:
+                    delattr(expecttest, "_TEST2")
+            finally:
+                os.environ.clear()
+                os.environ.update(env)
 
 
 def load_tests(

@@ -6,9 +6,7 @@ import sys
 import traceback
 import unittest
 import difflib
-from typing import Any, Callable, Dict, List, Match, Tuple, Set, Optional
-
-ACCEPT = os.getenv("EXPECTTEST_ACCEPT")
+from typing import Any, Callable, Dict, List, Match, Tuple, Optional
 
 LINENO_AT_START = sys.version_info >= (3, 8)
 
@@ -57,11 +55,26 @@ def escape_trailing_quote(s: str, quote: str) -> str:
 
 class EditHistory:
     state: Dict[str, List[Tuple[int, int]]]
-    seen: Set[Tuple[str, int]]
+    seen: Dict[str, Dict[int, str]]
 
     def __init__(self) -> None:
         self.state = {}
-        self.seen = set()
+        self.seen = {}
+
+    def reload_file(self, fn: str) -> None:
+        """
+        The idea is that if you reload a file, the line numbers
+        from traceback are now up to date, but we do NOT want to clear
+        out seen list as it will tell us if we are expecting the
+        same line multiple times.  Instead, we need to adjust
+        the seen list for the new world order.
+        """
+        new_seen = {}
+        for seen_loc, seen_str in self.seen.get(fn, {}).items():
+            new_seen[self.adjust_lineno(fn, seen_loc)] = seen_str
+
+        self.seen[fn] = new_seen
+        self.state.pop(fn, None)
 
     def adjust_lineno(self, fn: str, lineno: int) -> int:
         if fn not in self.state:
@@ -74,12 +87,12 @@ class EditHistory:
     def seen_file(self, fn: str) -> bool:
         return fn in self.state
 
-    def seen_edit(self, fn: str, lineno: int) -> bool:
-        return (fn, lineno) in self.seen
+    def seen_edit(self, fn: str, lineno: int) -> Optional[str]:
+        return self.seen.get(fn, {}).get(lineno, None)
 
-    def record_edit(self, fn: str, lineno: int, delta: int) -> None:
+    def record_edit(self, fn: str, lineno: int, delta: int, expect: str) -> None:
         self.state.setdefault(fn, []).append((lineno, delta))
-        self.seen.add((fn, lineno))
+        self.seen.setdefault(fn, {})[lineno] = expect
 
 
 EDIT_HISTORY = EditHistory()
@@ -221,13 +234,18 @@ def assert_expected_inline(
     if expect_filters is not None:
         actual = replace_many(expect_filters, actual)
 
-    if ACCEPT:
+    if os.getenv("EXPECTTEST_ACCEPT"):
         if actual != expect:
             # current frame and parent frame, plus any requested skip
             tb = traceback.extract_stack(limit=2 + skip)
             fn, lineno, _, _ = tb[0]
             debug_suffix = "" if not debug_id else f" for {debug_id}"
-            if EDIT_HISTORY.seen_edit(fn, lineno):
+            if (prev_actual := EDIT_HISTORY.seen_edit(fn, lineno)) is not None:
+                assert_eq(
+                    actual,
+                    prev_actual,
+                    msg=f"Uh oh, accepting different values{debug_suffix} at {fn}:{lineno}.  Are you running a parametrized test?  If so, you need a separate assertExpectedInline invocation per distinct output.",
+                )
                 print(
                     "Skipping already accepted output{} at {}:{}".format(
                         debug_suffix, fn, lineno
@@ -281,7 +299,7 @@ def assert_expected_inline(
 
                 f.write(new)
 
-            EDIT_HISTORY.record_edit(fn, lineno, delta)
+            EDIT_HISTORY.record_edit(fn, lineno, delta, actual)
     else:
         help_text = (
             "To accept the new output, re-run test with "
