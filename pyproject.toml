@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "expecttest"
-version = "0.2.0"
+version = "0.2.1"
 description = ""
 readme = "README.md"
 repository = "https://github.com/ezyang/expecttest"
