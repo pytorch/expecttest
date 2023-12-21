@@ -8,6 +8,8 @@ import unittest
 import difflib
 from typing import Any, Callable, Dict, List, Match, Tuple, Optional
 
+ACCEPT = os.getenv('EXPECTTEST_ACCEPT')
+
 LINENO_AT_START = sys.version_info >= (3, 8)
 
 
@@ -234,7 +236,7 @@ def assert_expected_inline(
     if expect_filters is not None:
         actual = replace_many(expect_filters, actual)
 
-    if os.getenv("EXPECTTEST_ACCEPT"):
+    if ACCEPT:
         if actual != expect:
             # current frame and parent frame, plus any requested skip
             tb = traceback.extract_stack(limit=2 + skip)
