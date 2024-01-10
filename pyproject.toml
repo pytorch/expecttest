@@ -14,10 +14,10 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.8.1"
 
 [tool.poetry.dev-dependencies]
-flake8 = "^3"
+flake8 = "^7"
 hypothesis = "^6"
 mypy = "^0.910"
 
