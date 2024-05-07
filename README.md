@@ -47,6 +47,19 @@ if __name__ == '__main__':
 Run `EXPECTTEST_ACCEPT=1 python test.py` , and the content in triple-quoted string
 will be automatically updated.
 
+For people who use `pytest`:
+
+```python
+from expecttest import assert_expected_inline
+
+def test_split():
+    s = 'hello world'
+    assert_expected_inline(str(s.split()), """""")
+```
+
+Run `EXPECTTEST_ACCEPT=1 pytest test.py` , and the content in triple-quoted string
+will be automatically updated.
+
 ## Some tips and tricks
 
   - Often, you will want to expect test on a multiline string.  This framework
