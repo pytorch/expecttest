@@ -28,8 +28,26 @@ The general recipe for how to use this is as follows:
      ```py
      self.assertExpectedInline(some_func(), "my_value")
      ```
+## A minimal working example
 
-Some tips and tricks:
+```python
+# test.py
+import unittest
+from expecttest import TestCase
+
+class TestStringMethods(TestCase):
+    def test_split(self):
+        s = 'hello world'
+        self.assertExpectedInline(str(s.split()), """""")
+
+if __name__ == '__main__':
+    unittest.main()
+```
+
+Run `EXPECTTEST_ACCEPT=1 python test.py` , and the content in triple-quoted string
+will be automatically updated.
+
+## Some tips and tricks
 
   - Often, you will want to expect test on a multiline string.  This framework
     understands triple-quoted strings, so you can just write `"""my_value"""`
