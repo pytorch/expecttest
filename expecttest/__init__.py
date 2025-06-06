@@ -9,9 +9,18 @@ import difflib
 import dataclasses
 from typing import Any, Callable, Dict, List, Match, Tuple, Optional
 
+
+def _accept_enabled() -> bool:
+    """
+    Returns True if we are in accept mode, i.e., the environment variable
+    EXPECTTEST_ACCEPT is set to a truthy value.
+    """
+    return os.getenv("EXPECTTEST_ACCEPT") not in (None, "", "0", "false", "False")
+
+
 # NB: We do not internally use this property for anything, but it
 # is preserved for BC reasons
-ACCEPT = os.getenv('EXPECTTEST_ACCEPT')
+ACCEPT = _accept_enabled()
 
 LINENO_AT_START = sys.version_info >= (3, 8)
 
@@ -346,7 +355,7 @@ def assert_expected_inline(
     # NB: Intentionally do not use ACCEPT global variable;
     # reaccessing environment here allows for modification
     # of os.environ to be picked up
-    if os.getenv("EXPECTTEST_ACCEPT"):
+    if _accept_enabled():
         if actual != expect:
             if not pos:
                 # current frame and parent frame, plus any requested skip
