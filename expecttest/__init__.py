@@ -1,7 +1,6 @@
 import ast
 import os
 import re
-import string
 import sys
 import traceback
 import unittest
@@ -138,7 +137,7 @@ def replace_string_literal(
 ) -> Tuple[str, int]:
     r"""
     Replace a triple quoted string literal with new contents.
-    Only handles printable ASCII correctly at the moment.  This
+    Only handles printable string literals correctly at the moment.  This
     will preserve the quote style of the original string, and
     makes a best effort to preserve raw-ness (unless it is impossible
     to do so.)
@@ -161,8 +160,7 @@ def replace_string_literal(
     >>> print(replace_string_literal("    f('''\"\"\"''')", 1, 1, "a ''' b")[0])
         f('''a \'\'\' b''')
     """
-    # Haven't implemented correct escaping for non-printable characters
-    assert all(c in string.printable for c in new_string), repr(new_string)
+    assert ast.literal_eval(repr(new_string)) == new_string, f"content {new_string!r} cannot be printed as a string literal"
 
     new_string = normalize_nl(new_string)
 

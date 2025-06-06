@@ -193,6 +193,22 @@ Accepting new output for __main__.Test.test_b at test.py:21
             r = sh(test_py)
             self.assertEqual(r.returncode, 0)
 
+    def test_smoketest_non_ascii(self) -> None:
+        with smoketest("accept_non_ascii.py") as test_py:
+            r = sh(test_py)
+            self.assertNotEqual(r.returncode, 0)
+            r = sh(test_py, accept=True)
+            self.assertExpectedInline(
+                r.stdout.replace(str(test_py), "test.py"),
+                """\
+Accepting new output for __main__.Test.test_a at test.py:10
+Skipping already accepted output for __main__.Test.test_a at test.py:10
+Accepting new output for __main__.Test.test_b at test.py:21
+""",
+            )
+            r = sh(test_py)
+            self.assertEqual(r.returncode, 0)
+
     def test_smoketest_no_unittest(self) -> None:
         with smoketest("no_unittest.py") as test_py:
             r = sh(test_py)
