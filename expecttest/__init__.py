@@ -152,8 +152,7 @@ def replace_string_literal(
     >>> print(replace_string_literal("    f('''\"\"\"''')", 1, 1, "a ''' b")[0])
         f('''a \'\'\' b''')
     """
-    # Haven't implemented correct escaping for non-printable characters
-    assert all(c in string.printable for c in new_string), repr(new_string)
+    assert eval(repr(new_string)) == new_string, f"content {new_string!r} cannot be printed as a string literal"
 
     new_string = normalize_nl(new_string)
 
