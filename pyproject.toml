@@ -1,29 +1,37 @@
-[tool.poetry]
+[project]
+authors = [
+    {name = "Edward Z. Yang", email = "ezyang@mit.edu"},
+]
+license = {text = "MIT"}
+requires-python = "<4.0.0,>=3.8.1"
+dependencies = []
 name = "expecttest"
 version = "0.3.0"
 description = ""
 readme = "README.md"
-repository = "https://github.com/ezyang/expecttest"
-authors = ["Edward Z. Yang <ezyang@mit.edu>"]
-include = ["expecttest/py.typed"]
-license = "MIT"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 
-[tool.poetry.dependencies]
-python = "^3.8.1"
+[project.urls]
+repository = "https://github.com/ezyang/expecttest"
 
-[tool.poetry.dev-dependencies]
-flake8 = "^7"
-hypothesis = "^6"
-mypy = "^0.910"
+[tool.uv]
+dev-dependencies = [
+    "flake8<8,>=7",
+    "hypothesis>=6,<7",
+    "mypy<2,>=0.910",
+    "pytest>=8.3.5",
+]
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["uv_build>=0.6,<0.7"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""
 
 [tool.mypy]
 python_version = "3.8"
@@ -32,6 +40,9 @@ show_column_numbers = true
 show_error_codes = true
 warn_no_return = true
 disallow_any_unimported = true
+exclude = [
+    "^.venv/",
+]
 
 # --strict
 warn_unused_configs = true
