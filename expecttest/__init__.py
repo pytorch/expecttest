@@ -161,7 +161,7 @@ def replace_string_literal(
     >>> print(replace_string_literal("    f('''\"\"\"''')", 1, 1, "a ''' b")[0])
         f('''a \'\'\' b''')
     """
-    assert eval(repr(new_string)) == new_string, f"content {new_string!r} cannot be printed as a string literal"
+    assert ast.literal_eval(repr(new_string)) == new_string, f"content {new_string!r} cannot be printed as a string literal"
 
     new_string = normalize_nl(new_string)
 
