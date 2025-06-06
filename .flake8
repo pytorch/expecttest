@@ -18,5 +18,6 @@ exclude =
   .git,
   .hg,
   __pycache__,
+  .venv,
 
 max-complexity = 12
