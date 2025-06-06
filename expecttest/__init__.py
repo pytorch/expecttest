@@ -129,7 +129,7 @@ def replace_string_literal(
 ) -> Tuple[str, int]:
     r"""
     Replace a triple quoted string literal with new contents.
-    Only handles printable ASCII correctly at the moment.  This
+    Only handles printable string literals correctly at the moment.  This
     will preserve the quote style of the original string, and
     makes a best effort to preserve raw-ness (unless it is impossible
     to do so.)
